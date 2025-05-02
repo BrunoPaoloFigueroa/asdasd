@@ -81,60 +81,68 @@ int main(void){
 
 }
 */
-char a=0x00;
+unsigned char a = 0;
+
 void config_PCI(void){
-    EIMSK|=(1<<INT0)|(1<<INT1);
-    EICRA|=(1<<ISC01)|(1<<ISC11);
-    DDRD&=~0x04;
-    PORTD|=0x04;
-    DDRD&=~0x08;
-    PORTD|=0x08;
+    EIMSK |= 0x03;          // Habilita INT0 y INT1
+    EICRA |= 0x0A;          // INT0 e INT1 en flanco de bajada
 
+    DDRD &= ~(0x0C);        // PD2 y PD3 como entrada (0x04 y 0x08)
+    PORTD |= 0x0C;          // Pull-up en PD2 y PD3
 }
+
 ISR(INT0_vect){
-
-  
-  a=(a+0x01);  
-
-
+    if (a < 99) a++;
 }
+
 ISR(INT1_vect){
+    if (a > 0) a--;
+}
 
-  
-  a=(a-0x01);  
-
+unsigned char decodificar(unsigned char valor){
+    switch(valor){
+        case 0: return 0x01;
+        case 1: return 0x02;
+        case 2: return 0x04;
+        case 3: return 0x08;
+        case 4: return 0x01;
+        case 5: return 0x02;
+        case 6: return 0x04;
+        case 7: return 0x08;
+        case 8: return 0x01;
+        case 9: return 0x02;
+        default: return 0x00;
+    }
 }
 
 int main(void){
-  
-  DDRB|=0x0F;
-  DDRD|=0xC0;
-  PORTD&=~(0xC0);
-  char u=a%10;
-      char d=a/10;
-  config_PCI();
+    DDRB |= 0x0F;           // PB0–PB3 como salidas
+    DDRD |= 0xC0;           // PD6 y PD7 como salidas (0x40 y 0x80)
+
+    PORTD &= ~(0xC0);       // PD6 y PD7 apagados
+
+    config_PCI();
     sei();
- while(1){
-  
-  PORTD&=~0x80;
-  PORTD|=0x40;
-  PORTB|=d;
-  PORTB&=0x0F;
-  _delay_ms(8);
-  PORTD&=~0x40;
-  PORTD|=0x80;
-  PORTB|=u;
-  PORTB&=0x0F;
-  _delay_ms(8);
-  
 
+    while (1){
+        unsigned char u = a % 10;
+        unsigned char d = a / 10;
+
+        // Mostrar decenas
+        PORTD &= ~(0x80);   // Apaga unidades (PD7)
+        PORTD |= 0x40;      // Enciende decenas (PD6)
+        PORTB = (PORTB & 0xF0) | (decodificar(d) & 0x0F);
+        _delay_ms(5);
+
+        // Mostrar unidades
+        PORTD &= ~(0x40);   // Apaga decenas (PD6)
+        PORTD |= 0x80;      // Enciende unidades (PD7)
+        PORTB = (PORTB & 0xF0) | (decodificar(u) & 0x0F);
+        _delay_ms(5);
+    }
+
+    return 0;
 }
-return 0;
-}
-
-
-
-
 
 
 
